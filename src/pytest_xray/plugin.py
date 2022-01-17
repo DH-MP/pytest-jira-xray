@@ -137,7 +137,7 @@ class XrayPlugin:
 
     def _associate_marker_metadata_for(self, items: List[Item]) -> None:
         """Store XRAY test id for test item."""
-        jira_ids: List[str] = []
+        jira_ids: dict = {}
         duplicated_jira_ids: List[str] = []
 
         for item in items:
@@ -146,10 +146,11 @@ class XrayPlugin:
                 continue
 
             test_key: str = marker.args[0]
-            if test_key in jira_ids:
+            unparametrized_nodeid= f"{item.nodeid.split('::')[0]}/{item.originalname}"
+            if test_key in jira_ids.keys() and jira_ids[test_key] != unparametrized_nodeid:
                 duplicated_jira_ids.append(test_key)
             else:
-                jira_ids.append(test_key)
+                jira_ids[test_key] = unparametrized_nodeid
             self.test_keys[item.nodeid] = test_key
             if duplicated_jira_ids:
                 raise XrayError(f'Duplicated test case ids: {duplicated_jira_ids}')
