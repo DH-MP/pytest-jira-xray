@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import math
 from pathlib import Path
 from typing import List, Tuple, Union, Optional, Dict
 
@@ -80,7 +81,8 @@ def pytest_configure(config: Config) -> None:
     if xray_path:
         publisher = FilePublisher(xray_path)  # type: ignore
     else:
-        if config.getoption(JIRA_CLOUD):
+        is_cloud = config.getoption(JIRA_CLOUD)
+        if is_cloud:
             options = get_bearer_auth()
             auth: Union[AuthBase, Tuple[str, str]] = BearerAuth(
                 options['BASE_URL'],
@@ -94,7 +96,8 @@ def pytest_configure(config: Config) -> None:
         publisher = XrayPublisher(  # type: ignore
             base_url=options['BASE_URL'],
             auth=auth,
-            verify=options['VERIFY']
+            verify=options['VERIFY'],
+            cloud=is_cloud
         )
 
     plugin = XrayPlugin(config, publisher)
@@ -199,6 +202,10 @@ class XrayPlugin:
     def pytest_sessionfinish(self, session):
         self.test_execution.finish_date = dt.datetime.now(tz=dt.timezone.utc)
         try:
+            execution_time_minutes = math.ceil((self.test_execution.finish_date - self.test_execution.start_date).total_seconds()/60)
+            execution_time_minutes = execution_time_minutes if execution_time_minutes > 1 else 1 # Smallest value time in jira
+            self.test_execution.description = self.test_execution.description \
+                                              + f"\n<ExecutionTime>{execution_time_minutes}m</ExecutionTime>"
             self.issue_id = self.publisher.publish(self.test_execution.as_dict())
         except XrayError as exc:
             self.exception = exc
