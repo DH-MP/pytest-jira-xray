@@ -5,7 +5,7 @@ from typing import Union
 import requests
 from requests.auth import AuthBase
 
-from pytest_xray.constant import TEST_EXECUTION_ENDPOINT, AUTHENTICATE_ENDPOINT
+from pytest_xray.constant import TEST_EXECUTION_ENDPOINT, CLOUD_TEST_EXECUTION_ENDPOINT, AUTHENTICATE_ENDPOINT
 from pytest_xray.exceptions import XrayError
 
 _logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class BearerAuth(AuthBase):
             _logger.exception(err_message)
             raise XrayError(err_message) from exc
         else:
-            auth_token = response.text
+            auth_token = response.text.replace("\"", "")
             r.headers['Authorization'] = f'Bearer {auth_token}'
         return r
 
@@ -56,17 +56,20 @@ class XrayPublisher:
             self,
             base_url: str,
             auth: Union[AuthBase, tuple],
-            verify: Union[bool, str] = True
+            verify: Union[bool, str] = True,
+            cloud: bool = False,
     ) -> None:
         if base_url.endswith('/'):
             base_url = base_url[:-1]
         self.base_url = base_url
         self.auth = auth
         self.verify = verify
+        self.cloud =  cloud
 
     @property
     def endpoint_url(self) -> str:
-        return self.base_url + TEST_EXECUTION_ENDPOINT
+        endpoint = TEST_EXECUTION_ENDPOINT if not self.cloud else CLOUD_TEST_EXECUTION_ENDPOINT
+        return self.base_url + endpoint
 
     def _send_data(self, url: str, auth: Union[AuthBase, tuple], data: dict) -> dict:
         headers = {
@@ -92,6 +95,7 @@ class XrayPublisher:
                 if 'error' in response.json():
                     _logger.error('Error message from server: %s', response.json()['error'])
                 raise XrayError(err_message) from exc
+
             return response.json()
 
     def publish(self, data: dict) -> str:
@@ -102,5 +106,5 @@ class XrayPublisher:
         :return: test execution issue id
         """
         response_data = self._send_data(self.endpoint_url, self.auth, data)
-        key = response_data['testExecIssue']['key']
+        key = response_data['testExecIssue']['key'] if not self.cloud else response_data['key']
         return key
