@@ -216,7 +216,7 @@ class XrayPlugin:
             descriptions.append(f"<ExecutionTime>{execution_time_minutes}m</ExecutionTime>")
             if hasattr(session.config.known_args_namespace, 'jenkins_build_url'):
                 descriptions.append(
-                    f"<JenkinsBuildUrl>{session.config.known_args_namespace.jenkins_build_url}</JenkinsBuildUrl>"
+                    f"<JenkinsBuildUrl> {session.config.known_args_namespace.jenkins_build_url} </JenkinsBuildUrl>"
                 )
             self.test_execution.description = "\n".join(descriptions)
             self.issue_id = self.publisher.publish(self.test_execution.as_dict())
