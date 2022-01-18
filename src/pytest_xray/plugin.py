@@ -70,6 +70,13 @@ def pytest_addoption(parser: Parser):
         default=None,
         help='Do not upload to a server but create JSON report file at given path'
     )
+    xray.addoption(
+        "--jenkins-build-url",
+        action='store',
+        metavar='url',
+        default=None,
+        help='Used to trace the job to test execution'
+    )
 
 
 def pytest_configure(config: Config) -> None:
@@ -205,8 +212,13 @@ class XrayPlugin:
         try:
             execution_time_minutes = math.ceil((self.test_execution.finish_date - self.test_execution.start_date).total_seconds()/60)
             execution_time_minutes = execution_time_minutes if execution_time_minutes > 1 else 1 # Smallest value time in jira
-            self.test_execution.description = self.test_execution.description \
-                                              + f"\n<ExecutionTime>{execution_time_minutes}m</ExecutionTime>"
+            descriptions = [self.test_execution.description]
+            descriptions.append(f"<ExecutionTime>{execution_time_minutes}m</ExecutionTime>")
+            if hasattr(session.config.known_args_namespace, 'jenkins_build_url'):
+                descriptions.append(
+                    f"<JenkinsBuildUrl>{session.config.known_args_namespace.jenkins_build_url}</JenkinsBuildUrl>"
+                )
+            self.test_execution.description = "\n".join(descriptions)
             self.issue_id = self.publisher.publish(self.test_execution.as_dict())
         except XrayError as exc:
             self.exception = exc
