@@ -153,7 +153,8 @@ class XrayPlugin:
                 continue
 
             test_key: str = marker.args[0]
-            unparametrized_nodeid= f"{item.nodeid.split('::')[0]}/{item.originalname}"
+            #unparametrized_nodeid = f"{item.nodeid.split('::')[0]}/{item.originalname}"
+            unparametrized_nodeid = item.originalname
             if test_key in jira_ids.keys() and jira_ids[test_key] != unparametrized_nodeid:
                 duplicated_jira_ids.append(test_key)
             else:
